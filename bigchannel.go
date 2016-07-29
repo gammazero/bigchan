@@ -1,8 +1,11 @@
+/*
+Package bigchannel provides a channel that uses a buffer between input and output.  The buffer can have any capacity specified.
+*/
 package bigchannel
 
 import "github.com/gammazero/queue"
 
-// If capacity is this size of smaller, use a normal channel.
+// If capacity is this size or smaller, use a normal channel.
 const normChanLimit = 16
 
 // BigChannel uses a queue to buffer data between the input and the output.
@@ -13,6 +16,10 @@ type BigChannel struct {
 	capacity      int
 }
 
+// New creates a new BigChannel with the specified buffer capacity.
+//
+// A capacity of -1 specifies infinite capacity.  Use caution if specifying an
+// unlimited capacity since no amount of storage is truly unlimited.
 func New(capacity int) *BigChannel {
 	if capacity < 0 {
 		capacity = -1
