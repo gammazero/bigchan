@@ -1,11 +1,11 @@
-package bigchannel
+package bigchan
 
 import (
 	"testing"
 	"time"
 )
 
-func TestBigChannel(t *testing.T) {
+func TestBigchan(t *testing.T) {
 	ch := New(-1)
 	go func() {
 		for i := 0; i < 1000; i++ {
@@ -21,7 +21,7 @@ func TestBigChannel(t *testing.T) {
 	}
 }
 
-func TestBigChannelLimit(t *testing.T) {
+func TestBigchanLimit(t *testing.T) {
 	ch := New(20)
 	for i := 0; i < 20; i++ {
 		ch.In() <- nil
@@ -37,7 +37,7 @@ func TestBigChannelLimit(t *testing.T) {
 	}
 }
 
-func TestBigChannelRace(t *testing.T) {
+func TestBigchanRace(t *testing.T) {
 	ch := New(-1)
 	go ch.Len()
 	go ch.Cap()
@@ -51,7 +51,7 @@ func TestBigChannelRace(t *testing.T) {
 	}()
 }
 
-func BenchmarkBigChannelSerial(b *testing.B) {
+func BenchmarkBigchanSerial(b *testing.B) {
 	ch := New(-1)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil
@@ -61,7 +61,7 @@ func BenchmarkBigChannelSerial(b *testing.B) {
 	}
 }
 
-func BenchmarkBigChannelParallel(b *testing.B) {
+func BenchmarkBigchanParallel(b *testing.B) {
 	ch := New(-1)
 	go func() {
 		for i := 0; i < b.N; i++ {
@@ -75,7 +75,7 @@ func BenchmarkBigChannelParallel(b *testing.B) {
 	ch.Close()
 }
 
-func BenchmarkBigChannelPushPull(b *testing.B) {
+func BenchmarkBigchanPushPull(b *testing.B) {
 	ch := New(-1)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil

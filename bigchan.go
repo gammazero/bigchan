@@ -1,34 +1,35 @@
 /*
-Package bigchannel provides a channel that uses a buffer between input and output.  The buffer can have any capacity specified.
+Package bigchan provides a channel that uses a buffer between input and output.
+The buffer can have any capacity specified.
 */
-package bigchannel
+package bigchan
 
 import "github.com/gammazero/queue"
 
 // If capacity is this size or smaller, use a normal channel.
 const normChanLimit = 16
 
-// BigChannel uses a queue to buffer data between the input and the output.
-type BigChannel struct {
+// Bigchan uses a queue to buffer data between the input and the output.
+type Bigchan struct {
 	input, output chan interface{}
 	length        chan int
 	buffer        *queue.Queue
 	capacity      int
 }
 
-// New creates a new BigChannel with the specified buffer capacity.
+// New creates a new Bigchan with the specified buffer capacity.
 //
 // A capacity < 0 specifies unlimited capacity.  Use caution if specifying an
 // unlimited capacity since no amount of storage is truly unlimited.
 //
 // If a capacity <= normChanLimit is given, then use a normal channel.
-func New(capacity int) *BigChannel {
+func New(capacity int) *Bigchan {
 	if capacity < 0 {
 		capacity = -1
 	} else if capacity <= normChanLimit {
 		// Use normal channel
 		ioChan := make(chan interface{}, capacity)
-		ch := &BigChannel{
+		ch := &Bigchan{
 			input:    ioChan,
 			output:   ioChan,
 			capacity: capacity,
@@ -36,7 +37,7 @@ func New(capacity int) *BigChannel {
 		return ch
 	}
 
-	ch := &BigChannel{
+	ch := &Bigchan{
 		input:    make(chan interface{}),
 		output:   make(chan interface{}),
 		length:   make(chan int),
@@ -48,17 +49,17 @@ func New(capacity int) *BigChannel {
 }
 
 // In returns the write side of the channel.
-func (ch *BigChannel) In() chan<- interface{} {
+func (ch *Bigchan) In() chan<- interface{} {
 	return ch.input
 }
 
 // Out returns the read side of the channel.
-func (ch *BigChannel) Out() <-chan interface{} {
+func (ch *Bigchan) Out() <-chan interface{} {
 	return ch.output
 }
 
 // Len returns the number of items buffered in the channel.
-func (ch *BigChannel) Len() int {
+func (ch *Bigchan) Len() int {
 	if ch.length == nil {
 		return len(ch.input)
 	}
@@ -66,17 +67,17 @@ func (ch *BigChannel) Len() int {
 }
 
 // Cap returns the capacity of the channel.
-func (ch *BigChannel) Cap() int {
+func (ch *Bigchan) Cap() int {
 	return ch.capacity
 }
 
 // Close closes the channel.  Additional input will panic, output will continue
 // to be readable until nil.
-func (ch *BigChannel) Close() {
+func (ch *Bigchan) Close() {
 	close(ch.input)
 }
 
-func (ch *BigChannel) bufferInput() {
+func (ch *Bigchan) bufferInput() {
 	var input, output, inputChan chan interface{}
 	var next interface{}
 	inputChan = ch.input
