@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestBigchan(t *testing.T) {
+func TestBigChan(t *testing.T) {
 	ch := New(-1)
 	go func() {
 		for i := 0; i < 1000; i++ {
@@ -21,7 +21,7 @@ func TestBigchan(t *testing.T) {
 	}
 }
 
-func TestBigchanLimit(t *testing.T) {
+func TestBigChanLimit(t *testing.T) {
 	ch := New(20)
 	for i := 0; i < 20; i++ {
 		ch.In() <- nil
@@ -37,7 +37,7 @@ func TestBigchanLimit(t *testing.T) {
 	}
 }
 
-func TestBigchanRace(t *testing.T) {
+func TestBigChanRace(t *testing.T) {
 	ch := New(-1)
 	go ch.Len()
 	go ch.Cap()
@@ -51,7 +51,7 @@ func TestBigchanRace(t *testing.T) {
 	}()
 }
 
-func BenchmarkBigchanSerial(b *testing.B) {
+func BenchmarkBigChanSerial(b *testing.B) {
 	ch := New(-1)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil
@@ -61,7 +61,7 @@ func BenchmarkBigchanSerial(b *testing.B) {
 	}
 }
 
-func BenchmarkBigchanParallel(b *testing.B) {
+func BenchmarkBigChanParallel(b *testing.B) {
 	ch := New(-1)
 	go func() {
 		for i := 0; i < b.N; i++ {
@@ -75,7 +75,7 @@ func BenchmarkBigchanParallel(b *testing.B) {
 	ch.Close()
 }
 
-func BenchmarkBigchanPushPull(b *testing.B) {
+func BenchmarkBigChanPushPull(b *testing.B) {
 	ch := New(-1)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil
