@@ -18,8 +18,10 @@ type BigChannel struct {
 
 // New creates a new BigChannel with the specified buffer capacity.
 //
-// A capacity of -1 specifies infinite capacity.  Use caution if specifying an
+// A capacity < 0 specifies unlimited capacity.  Use caution if specifying an
 // unlimited capacity since no amount of storage is truly unlimited.
+//
+// If a capacity <= normChanLimit is given, then use a normal channel.
 func New(capacity int) *BigChannel {
 	if capacity < 0 {
 		capacity = -1
@@ -45,14 +47,17 @@ func New(capacity int) *BigChannel {
 	return ch
 }
 
+// In returns the write side of the channel.
 func (ch *BigChannel) In() chan<- interface{} {
 	return ch.input
 }
 
+// Out returns the read side of the channel.
 func (ch *BigChannel) Out() <-chan interface{} {
 	return ch.output
 }
 
+// Len returns the number of items buffered in the channel.
 func (ch *BigChannel) Len() int {
 	if ch.length == nil {
 		return len(ch.input)
@@ -60,10 +65,13 @@ func (ch *BigChannel) Len() int {
 	return <-ch.length
 }
 
+// Cap returns the capacity of the channel.
 func (ch *BigChannel) Cap() int {
 	return ch.capacity
 }
 
+// Close closes the channel.  Additional input will panic, output will continue
+// to be readable until nil.
 func (ch *BigChannel) Close() {
 	close(ch.input)
 }
