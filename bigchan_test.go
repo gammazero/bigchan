@@ -24,7 +24,7 @@ func TestBigChanUnlimited(t *testing.T) {
 
 func TestBigChanLimited(t *testing.T) {
 	const msgCount = 1000
-	ch := New(10)
+	ch := New(normChanLimit * 2)
 	go func() {
 		for i := 0; i < msgCount; i++ {
 			ch.In() <- i
@@ -40,8 +40,8 @@ func TestBigChanLimited(t *testing.T) {
 }
 
 func TestBigChanLimit(t *testing.T) {
-	ch := New(20)
-	for i := 0; i < 20; i++ {
+	ch := New(normChanLimit * 2)
+	for i := 0; i < normChanLimit*2; i++ {
 		ch.In() <- nil
 	}
 	var timeout bool
