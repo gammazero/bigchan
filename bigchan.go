@@ -90,6 +90,7 @@ func (ch *BigChan) bufferInput() {
 				ch.buffer.Push(elem)
 			} else {
 				input = nil
+				inputChan = nil
 			}
 		case output <- next:
 			ch.buffer.Pop()
@@ -103,7 +104,7 @@ func (ch *BigChan) bufferInput() {
 			if ch.capacity != -1 && ch.buffer.Length() >= ch.capacity {
 				input = nil
 			} else {
-				input = ch.input
+				input = inputChan
 			}
 		} else {
 			output = nil
