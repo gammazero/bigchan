@@ -5,15 +5,33 @@ import (
 	"time"
 )
 
-func TestBigChan(t *testing.T) {
+func TestBigChanUnlimited(t *testing.T) {
+	const msgCount = 1000
 	ch := New(-1)
 	go func() {
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < msgCount; i++ {
 			ch.In() <- i
 		}
 		ch.Close()
 	}()
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < msgCount; i++ {
+		val := <-ch.Out()
+		if i != val.(int) {
+			t.Fatal("expected", i, "but got", val.(int))
+		}
+	}
+}
+
+func TestBigChanLimited(t *testing.T) {
+	const msgCount = 1000
+	ch := New(10)
+	go func() {
+		for i := 0; i < msgCount; i++ {
+			ch.In() <- i
+		}
+		ch.Close()
+	}()
+	for i := 0; i < msgCount; i++ {
 		val := <-ch.Out()
 		if i != val.(int) {
 			t.Fatal("expected", i, "but got", val.(int))
@@ -51,8 +69,35 @@ func TestBigChanRace(t *testing.T) {
 	}()
 }
 
+func TestDouble(t *testing.T) {
+	const msgCount = 1000
+	ch := New(100)
+	recvCh := New(100)
+	go func() {
+		for i := 0; i < msgCount; i++ {
+			ch.In() <- i
+		}
+		ch.Close()
+	}()
+	go func() {
+		for i := 0; i < msgCount; i++ {
+			val := <-ch.Out()
+			if i != val.(int) {
+				t.Fatal("expected", i, "but got", val.(int))
+			}
+			recvCh.In() <- i
+		}
+	}()
+	for i := 0; i < msgCount; i++ {
+		val := <-recvCh.Out()
+		if i != val.(int) {
+			t.Fatal("expected", i, "but got", val.(int))
+		}
+	}
+}
+
 func BenchmarkBigChanSerial(b *testing.B) {
-	ch := New(-1)
+	ch := New(b.N)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil
 	}
@@ -62,7 +107,7 @@ func BenchmarkBigChanSerial(b *testing.B) {
 }
 
 func BenchmarkBigChanParallel(b *testing.B) {
-	ch := New(-1)
+	ch := New(b.N)
 	go func() {
 		for i := 0; i < b.N; i++ {
 			<-ch.Out()
@@ -76,7 +121,7 @@ func BenchmarkBigChanParallel(b *testing.B) {
 }
 
 func BenchmarkBigChanPushPull(b *testing.B) {
-	ch := New(-1)
+	ch := New(b.N)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil
 		<-ch.Out()

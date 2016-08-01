@@ -87,26 +87,33 @@ func (ch *BigChan) bufferInput() {
 		select {
 		case elem, open := <-input:
 			if open {
+				// Push data from input chan to buffer.
 				ch.buffer.Push(elem)
 			} else {
+				// Input chan closed; do not select input chan.
 				input = nil
 				inputChan = nil
 			}
 		case output <- next:
+			// Wrote buffered data to output chan.  Remove item from buffer.
 			ch.buffer.Pop()
 		case ch.length <- ch.buffer.Length():
 		}
 
+		// If there is any data in the buffer, try to write it to output chan.
 		if ch.buffer.Length() > 0 {
 			output = ch.output
 			next = ch.buffer.Head()
-			// If buffer at capacity, then stop accepting input.
-			if ch.capacity != -1 && ch.buffer.Length() >= ch.capacity {
-				input = nil
-			} else {
-				input = inputChan
+			if ch.capacity != -1 {
+				// If buffer at capacity, then stop accepting input.
+				if ch.buffer.Length() >= ch.capacity {
+					input = nil
+				} else {
+					input = inputChan
+				}
 			}
 		} else {
+			// No buffered data; do not select output chan.
 			output = nil
 			next = nil
 		}
