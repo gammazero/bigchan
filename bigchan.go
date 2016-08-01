@@ -20,7 +20,7 @@ type BigChan struct {
 // New creates a new BigChan with the specified buffer capacity.
 //
 // A capacity < 0 specifies unlimited capacity.  Use caution if specifying an
-// unlimited capacity since no amount of storage is truly unlimited.
+// unlimited capacity since storage is still limited by system resources.
 //
 // If a capacity <= normChanLimit is given, then use a normal channel.
 func New(capacity int) *BigChan {
@@ -49,11 +49,17 @@ func New(capacity int) *BigChan {
 }
 
 // In returns the write side of the channel.
+//
+// Caution: After writing to the In() channel, the data may not be immediately
+// available on the Out() channel, and may be missed by a non-blocking select.
 func (ch *BigChan) In() chan<- interface{} {
 	return ch.input
 }
 
 // Out returns the read side of the channel.
+//
+// Caution: After writing to the In() channel, the data may not be immediately
+// available on the Out() channel, and may be missed by a non-blocking select.
 func (ch *BigChan) Out() <-chan interface{} {
 	return ch.output
 }
