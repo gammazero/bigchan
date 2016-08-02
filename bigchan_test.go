@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-func TestBigChanUnlimited(t *testing.T) {
+func TestUnlimitedSpace(t *testing.T) {
 	const msgCount = 1000
 	ch := New(-1)
 	go func() {
@@ -22,7 +22,7 @@ func TestBigChanUnlimited(t *testing.T) {
 	}
 }
 
-func TestBigChanLimited(t *testing.T) {
+func TestLimitedSpace(t *testing.T) {
 	const msgCount = 1000
 	ch := New(normChanLimit * 2)
 	go func() {
@@ -39,7 +39,7 @@ func TestBigChanLimited(t *testing.T) {
 	}
 }
 
-func TestBigChanLimit(t *testing.T) {
+func TestBufferLimit(t *testing.T) {
 	ch := New(normChanLimit * 2)
 	for i := 0; i < normChanLimit*2; i++ {
 		ch.In() <- nil
@@ -55,7 +55,36 @@ func TestBigChanLimit(t *testing.T) {
 	}
 }
 
-func TestBigChanRace(t *testing.T) {
+func TestReadAny(t *testing.T) {
+	const msgCount = 1000000
+	ch := New(-1)
+	for i := 0; i < msgCount; i++ {
+		ch.In() <- i
+		o, _ := ch.ReadAny()
+		if o.(int) != i {
+			t.Fatal("Fail to read channel after it was written.")
+		}
+	}
+
+	// This is equivalent to above.
+	var o interface{}
+	for i := 0; i < msgCount; i++ {
+		ch.In() <- i
+		select {
+		case o, _ = <-ch.Out():
+		default:
+			if ch.Len() == 0 {
+				t.Fatal("Fail to read channel after it was written.")
+			}
+			o, _ = <-ch.Out()
+		}
+		if o.(int) != i {
+			t.Fatal("Fail to read channel after it was written.")
+		}
+	}
+}
+
+func TestRace(t *testing.T) {
 	ch := New(-1)
 	go ch.Len()
 	go ch.Cap()
@@ -96,7 +125,7 @@ func TestDouble(t *testing.T) {
 	}
 }
 
-func BenchmarkBigChanSerial(b *testing.B) {
+func BenchmarkSerial(b *testing.B) {
 	ch := New(b.N)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil
@@ -106,7 +135,7 @@ func BenchmarkBigChanSerial(b *testing.B) {
 	}
 }
 
-func BenchmarkBigChanParallel(b *testing.B) {
+func BenchmarkParallel(b *testing.B) {
 	ch := New(b.N)
 	go func() {
 		for i := 0; i < b.N; i++ {
@@ -120,10 +149,18 @@ func BenchmarkBigChanParallel(b *testing.B) {
 	ch.Close()
 }
 
-func BenchmarkBigChanPushPull(b *testing.B) {
+func BenchmarkPushPull(b *testing.B) {
 	ch := New(b.N)
 	for i := 0; i < b.N; i++ {
 		ch.In() <- nil
 		<-ch.Out()
+	}
+}
+
+func BenchmarkReadAny(b *testing.B) {
+	ch := New(b.N)
+	for i := 0; i < b.N; i++ {
+		ch.In() <- nil
+		ch.ReadAny()
 	}
 }

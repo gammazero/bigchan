@@ -1,6 +1,44 @@
 /*
-Package bigchan provides a channel that uses a buffer between input and output.
-The buffer can have any capacity specified.
+Package bigchan implements a channel that uses a buffer between input and
+output.  The buffer can have any capacity specified, from 0 (unbuffered) to
+infinite.  This provides channel functionality with any buffer capacity
+desired, and without taking up large amounts of storage when little is used.
+
+If the specified buffer capacity is small, or unbuffered, the implementation is
+provided by a normal chan.  When specifying an unlimited buffer capacity use
+caution as the buffer is still limited by the resources available on the host
+system.
+
+Caution
+
+The behavior of bigchan differes from the bahavior of a normal channel in one
+important way: After writing to the In() channel, the data may not be
+immediately available on the Out() channel (until the buffer goroutine is
+scheduled), and may be missed by a non-blocking select.
+
+The ReadAny() function provides a way to read data is any is available.
+Alternatively, the following is an example of how to handle this in your own
+select block:
+
+  var item interface{}
+  var open bool
+  select {
+  case item, open = <-bigch.Out():
+  default:
+      // If using normal chan or buffer is empty.
+      if bigch.Len() == 0 {
+          // Return no data ready and chan open.
+          return nil, true
+      }
+      item, open = <-ch.Out()
+  }
+  return item, open
+
+Credits
+
+This implementation is based on ideas/examples from:
+https://github.com/eapache/channels
+
 */
 package bigchan
 
@@ -41,7 +79,7 @@ func New(capacity int) *BigChan {
 		input:    make(chan interface{}),
 		output:   make(chan interface{}),
 		length:   make(chan int),
-		buffer:   queue.New(0),
+		buffer:   queue.New(),
 		capacity: capacity,
 	}
 	go ch.bufferInput()
@@ -52,6 +90,7 @@ func New(capacity int) *BigChan {
 //
 // Caution: After writing to the In() channel, the data may not be immediately
 // available on the Out() channel, and may be missed by a non-blocking select.
+// See ReadAny() for example solution.
 func (ch *BigChan) In() chan<- interface{} {
 	return ch.input
 }
@@ -60,6 +99,7 @@ func (ch *BigChan) In() chan<- interface{} {
 //
 // Caution: After writing to the In() channel, the data may not be immediately
 // available on the Out() channel, and may be missed by a non-blocking select.
+// See ReadAny() for example solution.
 func (ch *BigChan) Out() <-chan interface{} {
 	return ch.output
 }
@@ -83,6 +123,29 @@ func (ch *BigChan) Close() {
 	close(ch.input)
 }
 
+// ReadAny reads an item if any is ready for reading, returning the item and a
+// flag to indicate whether the channel is still open.
+//
+// This is useful for ensuring that a read from the bigchan will return data
+// following a write to the bigchan.  This method also serves as an example of
+// how to implement the same solution in select blocks outside of this code.
+func (ch *BigChan) ReadAny() (item interface{}, open bool) {
+	select {
+	case item, open = <-ch.Out():
+	default:
+		// If using normal chan or buffer is empty.
+		if ch.length == nil || <-ch.length == 0 {
+			// Return no data ready and chan open.
+			open = true
+			return
+		}
+		item, open = <-ch.Out()
+	}
+	return
+}
+
+// bufferInput is the goroutine that transfers data from the In() chan to the
+// buffer and from the buffer to the Out() chan.
 func (ch *BigChan) bufferInput() {
 	var input, output, inputChan chan interface{}
 	var next interface{}
@@ -94,7 +157,7 @@ func (ch *BigChan) bufferInput() {
 		case elem, open := <-input:
 			if open {
 				// Push data from input chan to buffer.
-				ch.buffer.Push(elem)
+				ch.buffer.Add(elem)
 			} else {
 				// Input chan closed; do not select input chan.
 				input = nil
@@ -102,14 +165,14 @@ func (ch *BigChan) bufferInput() {
 			}
 		case output <- next:
 			// Wrote buffered data to output chan.  Remove item from buffer.
-			ch.buffer.Pop()
+			ch.buffer.Remove()
 		case ch.length <- ch.buffer.Length():
 		}
 
 		// If there is any data in the buffer, try to write it to output chan.
 		if ch.buffer.Length() > 0 {
 			output = ch.output
-			next = ch.buffer.Head()
+			next = ch.buffer.Peek()
 			if ch.capacity != -1 {
 				// If buffer at capacity, then stop accepting input.
 				if ch.buffer.Length() >= ch.capacity {
