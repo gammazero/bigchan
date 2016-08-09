@@ -11,7 +11,7 @@ system.
 
 Caution
 
-The behavior of bigchan differes from the bahavior of a normal channel in one
+The behavior of bigchan differs from the behavior of a normal channel in one
 important way: After writing to the In() channel, the data may not be
 immediately available on the Out() channel (until the buffer goroutine is
 scheduled), and may be missed by a non-blocking select.
@@ -67,12 +67,11 @@ func New(capacity int) *BigChan {
 	} else if capacity <= normChanLimit {
 		// Use normal channel
 		ioChan := make(chan interface{}, capacity)
-		ch := &BigChan{
+		return &BigChan{
 			input:    ioChan,
 			output:   ioChan,
 			capacity: capacity,
 		}
-		return ch
 	}
 
 	ch := &BigChan{
