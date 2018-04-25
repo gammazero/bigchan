@@ -42,7 +42,7 @@ https://github.com/eapache/channels
 */
 package bigchan
 
-import "github.com/gammazero/queue"
+import "github.com/gammazero/deque"
 
 // If capacity is this size or smaller, use a normal channel.
 const normChanLimit = 16
@@ -51,7 +51,7 @@ const normChanLimit = 16
 type BigChan struct {
 	input, output chan interface{}
 	length        chan int
-	buffer        *queue.Queue
+	buffer        deque.Deque
 	capacity      int
 }
 
@@ -78,7 +78,6 @@ func New(capacity int) *BigChan {
 		input:    make(chan interface{}),
 		output:   make(chan interface{}),
 		length:   make(chan int),
-		buffer:   queue.New(),
 		capacity: capacity,
 	}
 	go ch.bufferInput()
@@ -156,7 +155,7 @@ func (ch *BigChan) bufferInput() {
 		case elem, open := <-input:
 			if open {
 				// Push data from input chan to buffer.
-				ch.buffer.Add(elem)
+				ch.buffer.PushBack(elem)
 			} else {
 				// Input chan closed; do not select input chan.
 				input = nil
@@ -164,17 +163,17 @@ func (ch *BigChan) bufferInput() {
 			}
 		case output <- next:
 			// Wrote buffered data to output chan.  Remove item from buffer.
-			ch.buffer.Remove()
-		case ch.length <- ch.buffer.Length():
+			ch.buffer.PopFront()
+		case ch.length <- ch.buffer.Len():
 		}
 
 		// If there is any data in the buffer, try to write it to output chan.
-		if ch.buffer.Length() > 0 {
+		if ch.buffer.Len() > 0 {
 			output = ch.output
-			next = ch.buffer.Peek()
+			next = ch.buffer.Front()
 			if ch.capacity != -1 {
 				// If buffer at capacity, then stop accepting input.
-				if ch.buffer.Length() >= ch.capacity {
+				if ch.buffer.Len() >= ch.capacity {
 					input = nil
 				} else {
 					input = inputChan
